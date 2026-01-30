@@ -1,0 +1,461 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceMode {
+  BUSINESS
+  PERSONAL
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DebtDirection {
+  RECEIVABLE
+  PAYABLE
+}
+
+enum DebtStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum DebtType {
+  CREDIT
+  LOAN
+  SERVICE
+  OTHER
+}
+
+enum InterestPeriod {
+  MONTHLY
+}
+
+enum ReminderChannel {
+  WHATSAPP
+  EMAIL
+  SMS
+  IN_APP
+}
+
+enum ActivityType {
+  PERSON_CREATED
+  PERSON_UPDATED
+  DEBT_CREATED
+  DEBT_UPDATED
+  PAYMENT_CREATED
+  PROMISE_CREATED
+  REMINDER_SENT
+  NOTE_ADDED
+  ATTACHMENT_ADDED
+}
+
+enum OutboundMessageStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum OutboundMessageType {
+  TEST
+  DAILY
+  WEEKLY
+}
+
+enum OutboundMessageDirection {
+  ALL
+  RECEIVABLE
+  PAYABLE
+}
+
+enum EmailRecipientMode {
+  OWNERS
+  CUSTOM
+}
+
+model UserAuth {
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  passwordHash           String
+  mustResetPassword      Boolean   @default(false)
+  passwordResetToken     String?   @unique
+  passwordResetExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships      Membership[]
+  invitationsSent  Invitation[] @relation("InvitedBy")
+  invitationsTaken Invitation[] @relation("AcceptedBy")
+
+  @@map("User")
+}
+
+model Workspace {
+  id   String @id @default(cuid())
+  name String
+
+  mode WorkspaceMode @default(BUSINESS)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  memberships  Membership[]
+  persons      Person[]
+  debts        Debt[]
+  paymentTypes PaymentType[]
+  tags         Tag[]
+  activities   ActivityLog[]
+
+  payments            Payment[]
+  promises            Promise[]
+  reminders           Reminder[]
+  attachments         Attachment[]
+  invitations         Invitation[]
+  reminderTemplates   ReminderTemplate[]
+  outboundMessageLogs OutboundMessageLog[]
+  emailSettings       EmailSettings?
+}
+
+model Membership {
+  id          String     @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        MemberRole @default(OWNER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      UserAuth  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model Invitation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  email String
+  role  MemberRole @default(MEMBER)
+
+  token  String           @unique
+  status InvitationStatus @default(PENDING)
+
+  invitedByUserId String
+  invitedBy       UserAuth @relation("InvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  acceptedByUserId String?
+  acceptedBy       UserAuth? @relation("AcceptedBy", fields: [acceptedByUserId], references: [id])
+
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime  @default(dbgenerated("(now() + interval '7 days')"))
+  acceptedAt DateTime?
+
+  @@index([workspaceId])
+  @@index([email])
+}
+
+model Person {
+  id          String @id @default(cuid())
+  workspaceId String
+
+  name  String
+  phone String?
+  email String?
+
+  priority PriorityLevel @default(MEDIUM)
+
+  notesInternal String?
+  isFavorite    Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  debts Debt[]
+  tags  PersonTag[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, name])
+}
+
+model Tag {
+  id          String  @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  persons   PersonTag[]
+
+  @@unique([workspaceId, name])
+}
+
+model PersonTag {
+  id       String @id @default(cuid())
+  personId String
+  tagId    String
+
+  createdAt DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, tagId])
+}
+
+model Debt {
+  id          String @id @default(cuid())
+  workspaceId String
+  personId    String
+
+  direction DebtDirection @default(RECEIVABLE)
+  type      DebtType      @default(CREDIT)
+  status    DebtStatus    @default(PENDING)
+
+  title       String?
+  description String?
+
+  currency String @default("USD")
+
+  amountOriginal Decimal   @db.Decimal(12, 2)
+  dueDate        DateTime?
+  issuedAt       DateTime  @default(now())
+
+  hasInterest     Boolean         @default(false)
+  interestRatePct Decimal?        @db.Decimal(7, 4)
+  interestPeriod  InterestPeriod?
+
+  minSuggestedPayment Decimal? @db.Decimal(12, 2)
+
+  splitCount Int?
+  splitEach  Decimal? @db.Decimal(12, 2)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  payments    Payment[]
+  promises    Promise[]
+  reminders   Reminder[]
+  attachments Attachment[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, personId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, dueDate])
+}
+
+model Payment {
+  id          String @id @default(cuid())
+  workspaceId String
+  debtId      String
+
+  amount Decimal  @db.Decimal(12, 2)
+  paidAt DateTime @default(now())
+
+  paymentTypeId String?
+  note          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  debt        Debt         @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  paymentType PaymentType? @relation(fields: [paymentTypeId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([workspaceId, debtId])
+}
+
+model PaymentType {
+  id          String @id @default(cuid())
+  workspaceId String
+
+  name     String
+  isSystem Boolean @default(false)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  payments  Payment[]
+
+  @@unique([workspaceId, name])
+}
+
+model Promise {
+  id          String @id @default(cuid())
+  workspaceId String
+  debtId      String
+
+  promisedDate   DateTime
+  promisedAmount Decimal? @db.Decimal(12, 2)
+  note           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  debt      Debt      @relation(fields: [debtId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, promisedDate])
+  @@index([workspaceId, debtId])
+}
+
+model Reminder {
+  id          String  @id @default(cuid())
+  workspaceId String
+  debtId      String?
+
+  channel ReminderChannel @default(WHATSAPP)
+
+  scheduledFor DateTime?
+
+  sentAt          DateTime?
+  messageTemplate String?
+  messageText     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  debt      Debt?     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, scheduledFor])
+  @@index([workspaceId, sentAt])
+}
+
+model Attachment {
+  id          String  @id @default(cuid())
+  workspaceId String
+  debtId      String?
+
+  fileName String
+  fileUrl  String
+  mimeType String?
+  fileSize Int?
+
+  note String?
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  debt      Debt?     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model ActivityLog {
+  id          String @id @default(cuid())
+  workspaceId String
+
+  type ActivityType
+
+  userId String?
+
+  personId  String?
+  debtId    String?
+  paymentId String?
+
+  message String?
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model ReminderTemplate {
+  id          String @id @default(cuid())
+  workspaceId String
+
+  channel ReminderChannel
+  tone    String
+  title   String?
+  body    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, channel, tone])
+  @@index([workspaceId])
+}
+
+model OutboundMessageLog {
+  id          String @id @default(cuid())
+  workspaceId String
+
+  channel      ReminderChannel
+  to           String
+  subject      String
+  bodyText     String
+  bodyHtml     String?
+  bodyPreview  String
+  status       OutboundMessageStatus
+  type         OutboundMessageType
+  direction    OutboundMessageDirection
+  errorMessage String?
+  metaJson     String?
+
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model EmailSettings {
+  workspaceId     String @id
+  dailyEnabled    Boolean @default(false)
+  dailyHourLocal  Int     @default(8)
+  weeklyEnabled   Boolean @default(false)
+  weeklyDayOfWeek Int     @default(1)
+  weeklyHourLocal Int     @default(8)
+  toMode          EmailRecipientMode @default(OWNERS)
+  toEmails        Json?
+  timezone        String  @default("America/Guayaquil")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
