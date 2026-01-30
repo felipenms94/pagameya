@@ -80,3 +80,5 @@ export {
   useRunEmailNow,
 } from "./useEmailSettings"
 export type { UpdateEmailSettingsInput } from "./useEmailSettings"
+export { useWorkspaces, useCreateWorkspace } from "./useWorkspaces"
+export type { Workspace, WorkspaceMode } from "./useWorkspaces"
