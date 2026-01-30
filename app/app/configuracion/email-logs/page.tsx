@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { LoadError } from "@/components/ui/load-error"
 import {
   Select,
   SelectContent,
@@ -231,7 +232,7 @@ function EmailLogsContent() {
     [typeFilter, statusFilter, dirFilter, debouncedSearch, currentCursor]
   )
 
-  const { data, isLoading, error } = useEmailLogs(filters)
+  const { data, isLoading, error, refetch } = useEmailLogs(filters)
 
   // Accumulate items across pages
   const [accumulatedItems, setAccumulatedItems] = useState<
@@ -289,6 +290,17 @@ function EmailLogsContent() {
   // Handle forbidden
   if (error instanceof ApiError && (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")) {
     return <ForbiddenBanner />
+  }
+
+  // Handle other errors
+  if (error && !isLoading && displayItems.length === 0) {
+    return (
+      <LoadError
+        error={error}
+        onRetry={refetch}
+        title="Error al cargar historial"
+      />
+    )
   }
 
   return (

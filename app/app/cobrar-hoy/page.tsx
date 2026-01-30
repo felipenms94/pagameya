@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { LoadError } from "@/components/ui/load-error"
 import { TodayTable } from "@/components/today"
 import { AlertsList } from "@/components/alerts/alerts-list"
 import { InternalRemindersList } from "@/components/reminders/internal-reminders-list"
@@ -42,8 +43,8 @@ function TodayTabContent({
   direction: DebtDirection
   search: string
 }) {
-  const { data: items, isLoading } = useToday(direction)
-  const { data: alerts } = useAlerts(direction)
+  const { data: items, isLoading, error, refetch } = useToday(direction)
+  const { data: alerts, error: alertsError, refetch: refetchAlerts } = useAlerts(direction)
   const { data: internalReminders } = useInternalReminders(direction)
 
   const filteredItems = useMemo(() => {
@@ -53,6 +54,20 @@ function TodayTabContent({
 
   const alertItems = alerts?.items ?? []
   const reminderItems = internalReminders?.items ?? []
+
+  const criticalError = error || alertsError
+  if (criticalError && !isLoading) {
+    return (
+      <LoadError
+        error={criticalError}
+        onRetry={() => {
+          if (error) refetch()
+          if (alertsError) refetchAlerts()
+        }}
+        title="Error al cargar datos"
+      />
+    )
+  }
 
   return (
     <div className="space-y-4">

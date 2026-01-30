@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { LoadError } from "@/components/ui/load-error"
 import { TodayTable } from "@/components/today"
 import { AlertsList } from "@/components/alerts/alerts-list"
 import { InternalRemindersList } from "@/components/reminders/internal-reminders-list"
@@ -113,10 +114,25 @@ function SummaryChips({ summary, label }: { summary: AlertsSummary; label: strin
 }
 
 export default function DashboardPage() {
-  const { data: dashboard, isLoading: dashboardLoading } = useDashboard()
-  const { data: todayReceivable, isLoading: receivableLoading } = useToday("RECEIVABLE")
-  const { data: todayPayable, isLoading: payableLoading } = useToday("PAYABLE")
-  const { data: alerts } = useAlerts()
+  const {
+    data: dashboard,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+    refetch: refetchDashboard,
+  } = useDashboard()
+  const {
+    data: todayReceivable,
+    isLoading: receivableLoading,
+    error: receivableError,
+    refetch: refetchReceivable,
+  } = useToday("RECEIVABLE")
+  const {
+    data: todayPayable,
+    isLoading: payableLoading,
+    error: payableError,
+    refetch: refetchPayable,
+  } = useToday("PAYABLE")
+  const { data: alerts, error: alertsError, refetch: refetchAlerts } = useAlerts()
   const { data: internalReminders } = useInternalReminders()
 
   // Filter out OVERDUE - only show DUE_TODAY and PROMISE_TODAY
@@ -131,6 +147,33 @@ export default function DashboardPage() {
       (item) => item.reason === "DUE_TODAY" || item.reason === "PROMISE_TODAY"
     )
   }, [todayPayable])
+
+  // Combine errors - show first critical error
+  const criticalError = dashboardError || receivableError || payableError || alertsError
+  const handleRetry = () => {
+    if (dashboardError) refetchDashboard()
+    if (receivableError) refetchReceivable()
+    if (payableError) refetchPayable()
+    if (alertsError) refetchAlerts()
+  }
+
+  if (criticalError && !dashboardLoading && !receivableLoading && !payableLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
+            Resumen de tu actividad de cobros y deudas.
+          </p>
+        </div>
+        <LoadError
+          error={criticalError}
+          onRetry={handleRetry}
+          title="Error al cargar el dashboard"
+        />
+      </div>
+    )
+  }
 
   const receivable = dashboard?.totals.receivable
   const payable = dashboard?.totals.payable

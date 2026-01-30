@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { LoadError } from "@/components/ui/load-error"
 import {
   Select,
   SelectContent,
@@ -490,7 +491,7 @@ function EmailSettingsForm({ initialSettings }: EmailSettingsFormProps) {
 }
 
 function EmailSettingsContent() {
-  const { data: settings, isLoading, error } = useEmailSettings()
+  const { data: settings, isLoading, error, refetch } = useEmailSettings()
 
   // Handle forbidden
   if (
@@ -498,6 +499,17 @@ function EmailSettingsContent() {
     (error.code === "FORBIDDEN" || error.code === "UNAUTHORIZED")
   ) {
     return <ForbiddenBanner />
+  }
+
+  // Handle other errors
+  if (error && !isLoading) {
+    return (
+      <LoadError
+        error={error}
+        onRetry={refetch}
+        title="Error al cargar configuracion"
+      />
+    )
   }
 
   if (isLoading || !settings) {

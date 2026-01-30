@@ -6,8 +6,9 @@ type ApiResponse<T> = {
   meta: { requestId: string; ts: string }
 } | {
   ok: false
-  error: { code: string; message: string; details?: unknown }
-  meta: { requestId: string; ts: string }
+  code: string
+  message: string
+  requestId: string
 }
 
 type RequestOptions = {
@@ -20,14 +21,12 @@ type RequestOptions = {
 
 class ApiError extends Error {
   code: string
-  details?: unknown
   requestId?: string
 
-  constructor(code: string, message: string, details?: unknown, requestId?: string) {
+  constructor(code: string, message: string, requestId?: string) {
     super(message)
     this.name = "ApiError"
     this.code = code
-    this.details = details
     this.requestId = requestId
   }
 }
@@ -96,11 +95,10 @@ async function apiRequest<T>(
 
   const contentType = response.headers.get("content-type") ?? ""
   if (!contentType.includes("application/json")) {
-    const text = await response.text()
     throw new ApiError(
       "INVALID_RESPONSE",
       `Unexpected content type: ${contentType || "unknown"}`,
-      { status: response.status, body: text.slice(0, 300) }
+      response.headers.get("x-request-id") ?? undefined
     )
   }
 
@@ -111,23 +109,18 @@ async function apiRequest<T>(
     throw new ApiError(
       "INVALID_JSON",
       "Response body is not valid JSON",
-      { status: response.status }
+      response.headers.get("x-request-id") ?? undefined
     )
   }
 
   // Handle errors
   if (!json.ok) {
     // Handle unauthorized - redirect to login
-    if (json.error.code === "UNAUTHORIZED") {
+    if (json.code === "UNAUTHORIZED") {
       redirectToLogin()
     }
 
-    throw new ApiError(
-      json.error.code,
-      json.error.message,
-      json.error.details,
-      json.meta.requestId
-    )
+    throw new ApiError(json.code, json.message, json.requestId)
   }
 
   return json.data
