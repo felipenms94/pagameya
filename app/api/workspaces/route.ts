@@ -42,6 +42,20 @@ export const POST = withApiHandler(async (request: Request) => {
     )
   }
 
+  if (parsed.data.mode === "PERSONAL") {
+    const existingPersonal = await prisma.membership.findFirst({
+      where: { userId, workspace: { mode: "PERSONAL" } },
+      select: { workspace: { select: { id: true } } },
+    })
+    if (existingPersonal) {
+      throw apiError(
+        "PERSONAL_WORKSPACE_ALREADY_EXISTS",
+        "Personal workspace already exists",
+        409
+      )
+    }
+  }
+
   const workspace = await prisma.workspace.create({
     data: {
       name: parsed.data.name,

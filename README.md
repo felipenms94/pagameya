@@ -79,6 +79,8 @@ curl -X POST http://localhost:3000/api/workspaces \
   -d "{\"name\":\"Mi workspace\",\"mode\":\"BUSINESS\"}"
 ```
 
+Nota: solo se permite 1 workspace PERSONAL por usuario. Si ya existe, devuelve 409 con code PERSONAL_WORKSPACE_ALREADY_EXISTS.
+
 Ver 1:
 
 ```bash
