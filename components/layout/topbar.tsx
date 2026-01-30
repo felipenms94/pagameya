@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useSyncExternalStore } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Building2, User, Mail, Bell } from "lucide-react"
@@ -8,17 +8,24 @@ import { usePendingInvitations, useAlerts } from "@/hooks"
 
 type WorkspaceMode = "BUSINESS" | "PERSONAL"
 
+function getWorkspaceNameSnapshot() {
+  return localStorage.getItem("workspace_name") ?? ""
+}
+function getWorkspaceModeSnapshot() {
+  return localStorage.getItem("workspace_mode") as WorkspaceMode | null
+}
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback)
+  return () => window.removeEventListener("storage", callback)
+}
+const getServerSnapshot = () => ""
+const getServerModeSnapshot = () => null
+
 export function Topbar() {
   const { data: pendingInvitations = [] } = usePendingInvitations()
   const { data: alerts } = useAlerts()
-  const [workspaceName] = useState<string>(() => {
-    if (typeof window === "undefined") return ""
-    return localStorage.getItem("workspace_name") ?? ""
-  })
-  const [workspaceMode] = useState<WorkspaceMode | null>(() => {
-    if (typeof window === "undefined") return null
-    return localStorage.getItem("workspace_mode") as WorkspaceMode | null
-  })
+  const workspaceName = useSyncExternalStore(subscribe, getWorkspaceNameSnapshot, getServerSnapshot)
+  const workspaceMode = useSyncExternalStore(subscribe, getWorkspaceModeSnapshot, getServerModeSnapshot)
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4 lg:px-6">

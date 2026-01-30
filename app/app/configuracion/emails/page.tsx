@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useSyncExternalStore } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -56,11 +56,20 @@ function formatNextRun(isoString: string | null): string {
   })
 }
 
+const subscribeToStorage = (callback: () => void) => {
+  window.addEventListener("storage", callback)
+  return () => window.removeEventListener("storage", callback)
+}
+const getWorkspaceModeSnapshot = () => localStorage.getItem("workspace_mode")
+const getServerModeSnapshot = () => null
+
 function BusinessGate({ children }: { children: React.ReactNode }) {
-  const [mode] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null
-    return localStorage.getItem("workspace_mode")
-  })
+  const mode = useSyncExternalStore(subscribeToStorage, getWorkspaceModeSnapshot, getServerModeSnapshot)
+
+  if (mode === null) {
+    // Still hydrating or no mode set
+    return null
+  }
 
   if (mode !== "BUSINESS") {
     return (
@@ -197,12 +206,15 @@ function EmailSettingsForm({ initialSettings }: EmailSettingsFormProps) {
       toast("No se encontro tu email", "error")
       return
     }
+    // Send test based on what's enabled - prefer daily, fallback to weekly
+    const testType = dailyEnabled ? "DAILY" : weeklyEnabled ? "WEEKLY" : "DAILY"
     try {
       await sendTest.mutateAsync({
         toEmail,
-        type: "DAILY",
+        type: testType,
       })
-      toast(`Email de prueba enviado a ${toEmail}`, "success")
+      const typeLabel = testType === "DAILY" ? "diario" : "semanal"
+      toast(`Email de prueba (${typeLabel}) enviado a ${toEmail}`, "success")
     } catch (err) {
       toast(
         err instanceof Error ? err.message : "Error al enviar email de prueba",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useSyncExternalStore } from "react"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, Controller } from "react-hook-form"
@@ -160,11 +160,19 @@ function sortInvitations(invitations: Invitation[]): Invitation[] {
 
 /* ── Shared components ─────────────────────────────────── */
 
+const subscribeToStorage = (callback: () => void) => {
+  window.addEventListener("storage", callback)
+  return () => window.removeEventListener("storage", callback)
+}
+const getWorkspaceModeSnapshot = () => localStorage.getItem("workspace_mode")
+const getServerModeSnapshot = () => null
+
 function BusinessGate({ children }: { children: React.ReactNode }) {
-  const [mode] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null
-    return localStorage.getItem("workspace_mode")
-  })
+  const mode = useSyncExternalStore(subscribeToStorage, getWorkspaceModeSnapshot, getServerModeSnapshot)
+
+  if (mode === null) {
+    return null
+  }
 
   if (mode !== "BUSINESS") {
     return (

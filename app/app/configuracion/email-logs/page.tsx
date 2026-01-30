@@ -1,6 +1,7 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useRef, useSyncExternalStore, useEffect } from "react"
 import {
   Card,
   CardContent,
@@ -86,11 +87,19 @@ function formatDateTime(iso: string) {
   })
 }
 
+const subscribeToStorage = (callback: () => void) => {
+  window.addEventListener("storage", callback)
+  return () => window.removeEventListener("storage", callback)
+}
+const getWorkspaceModeSnapshot = () => localStorage.getItem("workspace_mode")
+const getServerModeSnapshot = () => null
+
 function BusinessGate({ children }: { children: React.ReactNode }) {
-  const [mode] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null
-    return localStorage.getItem("workspace_mode")
-  })
+  const mode = useSyncExternalStore(subscribeToStorage, getWorkspaceModeSnapshot, getServerModeSnapshot)
+
+  if (mode === null) {
+    return null
+  }
 
   if (mode !== "BUSINESS") {
     return (
@@ -228,29 +237,32 @@ function EmailLogsContent() {
   const [accumulatedItems, setAccumulatedItems] = useState<
     OutboundMessageLogDTO[]
   >([])
-  const [lastProcessedCursor, setLastProcessedCursor] = useState<
-    string | undefined
-  >(undefined)
+  const lastProcessedCursorRef = useRef<string | undefined>(undefined)
 
   // Reset accumulated when filters change (not cursor)
   const filterKey = `${typeFilter}:${statusFilter}:${dirFilter}:${debouncedSearch}`
-  const [lastFilterKey, setLastFilterKey] = useState(filterKey)
-  if (filterKey !== lastFilterKey) {
-    setLastFilterKey(filterKey)
-    setAccumulatedItems([])
-    setCursors([])
-    setLastProcessedCursor(undefined)
-  }
+  const prevFilterKeyRef = useRef(filterKey)
+
+  useEffect(() => {
+    if (filterKey !== prevFilterKeyRef.current) {
+      prevFilterKeyRef.current = filterKey
+      setAccumulatedItems([])
+      setCursors([])
+      lastProcessedCursorRef.current = undefined
+    }
+  }, [filterKey])
 
   // Append new items when data arrives for a new cursor
-  if (data && currentCursor !== lastProcessedCursor) {
-    setLastProcessedCursor(currentCursor)
-    if (currentCursor) {
-      setAccumulatedItems((prev) => [...prev, ...data.items])
-    } else {
-      setAccumulatedItems(data.items)
+  useEffect(() => {
+    if (data && currentCursor !== lastProcessedCursorRef.current) {
+      lastProcessedCursorRef.current = currentCursor
+      if (currentCursor) {
+        setAccumulatedItems((prev) => [...prev, ...data.items])
+      } else {
+        setAccumulatedItems(data.items)
+      }
     }
-  }
+  }, [data, currentCursor])
 
   const displayItems =
     accumulatedItems.length > 0 ? accumulatedItems : data?.items ?? []

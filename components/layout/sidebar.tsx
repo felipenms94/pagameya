@@ -111,12 +111,12 @@ export function Sidebar() {
   const [isConfigOpen, setIsConfigOpen] = useState(true)
 
   const handleLogout = async () => {
-    localStorage.removeItem("workspace_id")
-    localStorage.removeItem("workspace_name")
-    localStorage.removeItem("workspace_mode")
     try {
       await fetch("/api/auth/logout", { method: "POST" })
     } finally {
+      localStorage.removeItem("workspace_id")
+      localStorage.removeItem("workspace_name")
+      localStorage.removeItem("workspace_mode")
       window.location.href = "/login"
     }
   }
