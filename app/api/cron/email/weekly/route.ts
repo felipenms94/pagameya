@@ -14,6 +14,7 @@ import { ok } from "@/lib/api/response"
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/services/email"
 import { buildWeeklyEmail } from "@/lib/services/email-automation"
+import { warnMissingEnv } from "@/lib/env"
 
 export const runtime = "nodejs"
 
@@ -81,6 +82,7 @@ async function alreadySentThisWeek(params: {
 }
 
 export const POST = withApiHandler(async (request: Request) => {
+  warnMissingEnv(["CRON_SECRET"], "cron weekly endpoint")
   const cronSecret = request.headers.get("x-cron-secret")
   if (!cronSecret || cronSecret !== process.env.CRON_SECRET) {
     throw apiError(ERROR_CODES.UNAUTHORIZED, "Invalid cron secret", 401)

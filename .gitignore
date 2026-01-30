@@ -43,3 +43,6 @@ next-env.d.ts
 nul
 **/nul
 
+
+.vercel
+.env*.local

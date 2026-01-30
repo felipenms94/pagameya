@@ -364,11 +364,17 @@ Cron respeta EmailSettings (enabled + recipients).
 
 Variables de entorno requeridas en Vercel:
 - `DATABASE_URL`
+- `DIRECT_URL`
+- `AUTH_SECRET`
 - `CRON_SECRET`
 - `SMTP_*` (si usas email SMTP)
 - `APP_BASE_URL` (opcional)
 
 Configura `CRON_SECRET` y usa el header `x-cron-secret` en tus llamadas cron.
+
+Build settings en Vercel:
+- Build Command: `npm run vercel-build`
+- Install Command: `npm ci`
 
 Ejemplo `vercel.json` (horarios en UTC):
 

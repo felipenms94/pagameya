@@ -1,4 +1,5 @@
 import crypto from "crypto"
+import { warnMissingEnv } from "@/lib/env"
 
 const SESSION_COOKIE = "auth_session"
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
@@ -12,6 +13,7 @@ type SessionPayload = {
 function getAuthSecret() {
   const secret = process.env.AUTH_SECRET
   if (secret) return secret
+  warnMissingEnv(["AUTH_SECRET"], "Auth sessions")
   if (process.env.NODE_ENV !== "production") {
     return "dev-auth-secret"
   }
