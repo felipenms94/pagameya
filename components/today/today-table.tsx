@@ -35,7 +35,7 @@ import { ReasonBadge } from "./reason-badge"
 import { WhatsappButton } from "./whatsapp-button"
 import { useCreatePayment } from "@/hooks"
 import type { TodayItem } from "@/lib/types"
-import { Zap, Loader2 } from "lucide-react"
+import { Zap, Loader2, CalendarCheck, Phone, Copy } from "lucide-react"
 
 type TodayTableProps = {
   items: TodayItem[]
@@ -169,6 +169,7 @@ export function TodayTable({
   if (displayItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
+        <CalendarCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
         <p className="text-lg font-medium text-muted-foreground">
           {messages.title}
         </p>
@@ -294,6 +295,29 @@ export function TodayTable({
                       hasPhone={!!item.debt.person.phone}
                       variant={showWhatsappDropdown ? "dropdown" : "simple"}
                     />
+                    {item.debt.person.phone ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1"
+                        asChild
+                      >
+                        <a href={`tel:${item.debt.person.phone.replace(/\s/g, "")}`}>
+                          <Phone className="h-3 w-3" />
+                          <span className="hidden sm:inline">Llamar</span>
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1"
+                        onClick={() => toast("Sin teléfono registrado", "info")}
+                      >
+                        <Copy className="h-3 w-3" />
+                        <span className="hidden sm:inline">Copiar</span>
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

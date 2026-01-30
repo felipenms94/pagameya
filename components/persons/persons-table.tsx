@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PriorityBadge } from "./priority-badge"
 import { TagBadge } from "./tag-badge"
-import { Eye, Pencil, Trash2, Star } from "lucide-react"
+import { Eye, Pencil, Trash2, Star, Users, SearchX } from "lucide-react"
 import type { Person } from "@/lib/types"
 
 type PersonsTableProps = {
@@ -21,6 +21,8 @@ type PersonsTableProps = {
   isLoading?: boolean
   onEdit?: (person: Person) => void
   onDelete?: (person: Person) => void
+  hasFilters?: boolean
+  onClearFilters?: () => void
 }
 
 function TableSkeleton() {
@@ -68,14 +70,40 @@ export function PersonsTable({
   isLoading,
   onEdit,
   onDelete,
+  hasFilters,
+  onClearFilters,
 }: PersonsTableProps) {
   if (isLoading) {
     return <TableSkeleton />
   }
 
   if (persons.length === 0) {
+    if (hasFilters) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <SearchX className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">
+            No hay resultados para los filtros actuales
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Intenta con otros criterios de búsqueda.
+          </p>
+          {onClearFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClearFilters}
+              className="mt-4"
+            >
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
+      )
+    }
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
         <p className="text-lg font-medium text-muted-foreground">
           No hay personas registradas
         </p>

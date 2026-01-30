@@ -92,7 +92,7 @@ export default function PersonasPage() {
     setTagFilter("ALL")
   }
 
-  const hasFilters = search || priorityFilter !== "ALL" || tagFilter !== "ALL"
+  const hasFilters = !!search || priorityFilter !== "ALL" || tagFilter !== "ALL"
 
   return (
     <div className="space-y-6">
@@ -188,6 +188,8 @@ export default function PersonasPage() {
             isLoading={isLoading}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            hasFilters={hasFilters}
+            onClearFilters={clearFilters}
           />
         </CardContent>
       </Card>

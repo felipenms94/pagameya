@@ -67,6 +67,11 @@ import {
 import type { Payment } from "@/lib/types"
 import { ArrowLeft, Plus, Trash2, Loader2, Link2, Zap, Calendar, DollarSign, TrendingUp, Percent, CheckCircle2 } from "lucide-react"
 
+// Helper to round to cents avoiding floating point issues
+function roundToCents(amount: number): number {
+  return Math.round(amount * 100) / 100
+}
+
 const paymentSchema = z.object({
   amount: z.coerce.number().min(0.01, "Monto requerido"),
   paymentTypeId: z.string().optional(),
@@ -157,6 +162,7 @@ export default function DebtDetailPage() {
     null
   )
   const [quickPayAmount, setQuickPayAmount] = useState<number | null>(null)
+  const [pendingQuickPayAmount, setPendingQuickPayAmount] = useState<number | null>(null)
 
   const paymentForm = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
@@ -299,6 +305,7 @@ export default function DebtDetailPage() {
 
   const handleQuickPay = async () => {
     if (!quickPayAmount || !debt) return
+    setPendingQuickPayAmount(quickPayAmount)
     try {
       await createPayment.mutateAsync({
         debtId: debt.id,
@@ -315,6 +322,7 @@ export default function DebtDetailPage() {
       )
     } finally {
       setQuickPayAmount(null)
+      setPendingQuickPayAmount(null)
     }
   }
 
@@ -519,34 +527,48 @@ export default function DebtDetailPage() {
             <div className="flex flex-wrap gap-2">
               {(debt.suggestedPayments ?? [])
                 .filter((amount) => amount > 0 && amount <= debt.balance)
-                .map((amount) => (
-                  <Button
-                    key={amount}
-                    variant="outline"
-                    onClick={() => setQuickPayAmount(Math.round(amount * 100) / 100)}
-                    disabled={createPayment.isPending}
-                  >
-                    {formatCurrency(amount, debt.currency)}
-                  </Button>
-                ))}
+                .map((amount) => {
+                  const rounded = roundToCents(amount)
+                  const isThisPending = pendingQuickPayAmount === rounded
+                  return (
+                    <Button
+                      key={amount}
+                      variant="outline"
+                      onClick={() => setQuickPayAmount(rounded)}
+                      disabled={createPayment.isPending}
+                      className="gap-2"
+                    >
+                      {isThisPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {formatCurrency(amount, debt.currency)}
+                    </Button>
+                  )
+                })}
               {debt.minSuggestedPayment &&
                debt.minSuggestedPayment > 0 &&
                !(debt.suggestedPayments ?? []).includes(debt.minSuggestedPayment) &&
                debt.minSuggestedPayment <= debt.balance && (
                 <Button
                   variant="outline"
-                  onClick={() => setQuickPayAmount(Math.round(debt.minSuggestedPayment! * 100) / 100)}
+                  onClick={() => setQuickPayAmount(roundToCents(debt.minSuggestedPayment!))}
                   disabled={createPayment.isPending}
+                  className="gap-2"
                 >
+                  {pendingQuickPayAmount === roundToCents(debt.minSuggestedPayment!) && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
                   {formatCurrency(debt.minSuggestedPayment, debt.currency)} (mín.)
                 </Button>
               )}
               {debt.balance > 0 && (
                 <Button
                   variant="default"
-                  onClick={() => setQuickPayAmount(Math.round(debt.balance * 100) / 100)}
+                  onClick={() => setQuickPayAmount(roundToCents(debt.balance))}
                   disabled={createPayment.isPending}
+                  className="gap-2"
                 >
+                  {pendingQuickPayAmount === roundToCents(debt.balance) && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
                   Pagar todo ({formatCurrency(debt.balance, debt.currency)})
                 </Button>
               )}

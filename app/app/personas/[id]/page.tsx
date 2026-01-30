@@ -62,6 +62,7 @@ import {
   TrendingUp,
   TrendingDown,
   Eye,
+  Loader2,
 } from "lucide-react"
 
 function formatCurrency(amount: number, currency: string = "USD") {
@@ -347,6 +348,7 @@ export default function PersonDetailPage() {
                       key={tag.id}
                       tag={tag}
                       removable
+                      loading={removeTag.isPending}
                       onRemove={() => handleRemoveTag(tag.id)}
                     />
                   ))
@@ -364,9 +366,19 @@ export default function PersonDetailPage() {
                 <span className="text-sm text-muted-foreground">
                   Agregar tag
                 </span>
-                <Select onValueChange={handleAssignTag}>
+                <Select
+                  onValueChange={handleAssignTag}
+                  disabled={assignTag.isPending || removeTag.isPending}
+                >
                   <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Seleccionar tag..." />
+                    {assignTag.isPending ? (
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Asignando...
+                      </span>
+                    ) : (
+                      <SelectValue placeholder="Seleccionar tag..." />
+                    )}
                   </SelectTrigger>
                   <SelectContent>
                     {availableTags.map((tag) => (
