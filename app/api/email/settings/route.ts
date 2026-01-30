@@ -1,4 +1,4 @@
-import { EmailRecipientMode, MemberRole } from "@prisma/client"
+import { EmailRecipientMode, MemberRole, Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
@@ -116,7 +116,7 @@ export const PUT = withApiHandler(async (request: Request) => {
   const storedEmails =
     toMode === EmailRecipientMode.CUSTOM && normalizedEmails.length > 0
       ? normalizedEmails
-      : null
+      : Prisma.DbNull
 
   const settings = await prisma.emailSettings.upsert({
     where: { workspaceId },

@@ -85,7 +85,7 @@ function filterBySearch(
 function ReminderRow({ item }: { item: SuggestedReminderItem }) {
   const whatsapp = useWhatsappLink()
   const logReminder = useLogReminder()
-  const toast = useToast()
+  const { toast } = useToast()
   const [busyChannel, setBusyChannel] = useState<string | null>(null)
 
   const displayDate =
@@ -139,7 +139,7 @@ function ReminderRow({ item }: { item: SuggestedReminderItem }) {
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold truncate">{item.personName}</p>
           <AlertKindBadge kind={item.kind} />
-          {item.recommendedTone === "strong" && (
+          {item.recommendedTone === "fuerte" && (
             <Badge variant="destructive" className="text-[10px]">
               Tono fuerte
             </Badge>

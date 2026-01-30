@@ -1,4 +1,9 @@
-import { PrismaClient, WorkspaceMode, MemberRole } from "@prisma/client"
+import {
+  PrismaClient,
+  WorkspaceMode,
+  MemberRole,
+  ReminderChannel,
+} from "@prisma/client"
 import { createUserAuth } from "@/lib/auth/createUserAuth"
 
 const prisma = new PrismaClient()
@@ -50,28 +55,28 @@ async function ensureReminderTemplates(workspaceIds: string[]) {
   const templates = workspaceIds.flatMap((workspaceId) => [
     {
       workspaceId,
-      channel: "WHATSAPP",
+      channel: ReminderChannel.WHATSAPP,
       tone: "soft",
       title: null,
       body: "Hola {personName}, espero estes bien. Te escribo para recordarte el saldo pendiente de {balance}. Me confirmas cuando podrias ponerte al dia? Gracias.",
     },
     {
       workspaceId,
-      channel: "WHATSAPP",
+      channel: ReminderChannel.WHATSAPP,
       tone: "normal",
       title: null,
       body: "Hola {personName}. Te recuerdo que tienes un saldo pendiente de {balance} con vencimiento {dueDate}. Quedo atento a tu pago.",
     },
     {
       workspaceId,
-      channel: "WHATSAPP",
+      channel: ReminderChannel.WHATSAPP,
       tone: "strong",
       title: null,
       body: "Hola {personName}. Te notifico que el saldo pendiente de {balance} esta vencido. Por favor regulariza el pago hoy para evitar inconvenientes.",
     },
     {
       workspaceId,
-      channel: "EMAIL",
+      channel: ReminderChannel.EMAIL,
       tone: "normal",
       title: "Recordatorio {workspaceName}",
       body: "Hola {personName},\n\nTe recordamos el saldo pendiente de {balance} ({debtTitle}). Vence {dueDate}.\n\nGracias,\n{workspaceName}",

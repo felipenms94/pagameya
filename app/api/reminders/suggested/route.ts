@@ -75,7 +75,7 @@ async function fetchAlertsFromRoute(
     headers: cookie ? { cookie } : undefined,
   })
 
-  const response = await getAlerts(alertsRequest)
+  const response = await getAlerts(alertsRequest, {} as unknown)
   if (!response.ok) {
     return response
   }

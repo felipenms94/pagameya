@@ -125,14 +125,6 @@ export const PATCH = withApiHandler(
       )
     }
 
-    if (nextRole === MemberRole.OWNER) {
-      throw apiError(
-        "FORBIDDEN_ROLE_CHANGE",
-        "Promoting to OWNER is not allowed via this API",
-        403
-      )
-    }
-
     if (targetMembership.role === nextRole) {
       return NextResponse.json(
         ok({

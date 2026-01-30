@@ -32,7 +32,7 @@ export const POST = withApiHandler(async (request: Request) => {
   })
 
   if (!user) {
-    throw apiError("INVALID_RESET_TOKEN", "Token inválido", 400)
+    throw apiError("INVALID_RESET_TOKEN", "Token invalido", 400)
   }
 
   if (!user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {

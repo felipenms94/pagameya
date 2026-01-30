@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
-import type { AlertsData, AlertItem, TodayReason } from "@/lib/types"
+import type { TodayReason } from "@/lib/types"
 import {
   AlertTriangle,
   ChevronDown,
@@ -13,6 +13,25 @@ import {
   CalendarClock,
   HandCoins,
 } from "lucide-react"
+
+// Local types for the alerts card component
+type AlertItemLocal = {
+  debtId: string
+  personName: string
+  title: string | null
+  balance: number
+  currency: string
+  reason: TodayReason
+}
+
+type AlertsDataLocal = {
+  counts?: {
+    overdue?: number
+    dueToday?: number
+    promiseToday?: number
+  }
+  items: AlertItemLocal[]
+}
 
 const STORAGE_KEY = "pagameya_dismissed_alerts"
 const MAX_ITEMS_VISIBLE = 5
@@ -81,7 +100,7 @@ function ReasonBadge({ reason }: { reason: TodayReason }) {
   )
 }
 
-function AlertItemCard({ item }: { item: AlertItem }) {
+function AlertItemCard({ item }: { item: AlertItemLocal }) {
   const config = alertConfig[item.reason]
 
   return (
@@ -120,7 +139,7 @@ function setDismissedSignature(signature: string) {
 }
 
 type AlertsNoticeProps = {
-  data?: AlertsData
+  data?: AlertsDataLocal
   isLoading?: boolean
 }
 
